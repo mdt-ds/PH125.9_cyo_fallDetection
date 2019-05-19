@@ -1,16 +1,18 @@
 # Script Header ----
+# Script Header ----
 # File-Name:      PH125_9_cyo_capstone_script_mdt.R
-# Date:           March 31, 2019                                   
+# Date:           May 26, 2019                                   
 # Author:         Mario De Toma <mdt.datascience@gmail.com>
 # Purpose:        R script for submission of PH125_9 choose your own capstone project for
 #                 HarvardX Data Science Professional Certificate
 # Data Used:      falldetection dataset   
-# Packages Used:  dplyr, caret, ggplot2, doSNOW, e1071  
+# Packages Used:  dplyr, caret, ggplot2, GGAlly, doParallel,  
+#                 e1071, nnet, randomForest, DALEX, ceterisParibus
 
 # This program is believed to be free of errors, but it comes with no guarantee! 
 # The user bears all responsibility for interpreting the results.
 
-# All source code is copyright (c) 2017, under the Simplified BSD License.  
+# All source code is copyright (c) 2019, under the Simplified BSD License.  
 # For more information on FreeBSD see: http://www.opensource.org/licenses/bsd-license.php
 
 # All images and materials produced by this code are licensed under the Creative Commons 
@@ -18,9 +20,6 @@
 
 # All rights reserved.
 
-# NOTE: If you are running this in the R console you must use the 'setwd' command to set the 
-# working directory for the console to whereever you have saved this file prior to running.
-# Otherwise you will see errors when loading data or saving figures!
 #############################################################################################
 
 
@@ -252,6 +251,85 @@ test_results <- test_results %>% add_row(method = 'rf', accuracy = test_accuracy
 
 # results ----
 test_results %>% knitr::kable()
+
+# interpretation of the rf model ----
+# selected prediction
+knitr::kable(fall_test[15,])
+
+# ceteris paribus analysis
+if(!require(DALEX)) {
+  install.packages("DALEX", repos = "http://cran.us.r-project.org")
+  library(DALEX)
+}
+if(!require(ceterisParibus)) {
+  install.packages("ceterisParibus", repos = "http://cran.us.r-project.org")
+  library(ceterisParibus)
+}
+pred_Standing <- function(m, d) predict(m, d, type = 'prob')[,1]
+pred_Walking <- function(m, d) predict(m, d, type = 'prob')[,2]
+pred_Sitting <- function(m, d) predict(m, d, type = 'prob')[,3]
+pred_Falling <- function(m, d) predict(m, d, type = 'prob')[,4]
+pred_Cramps <- function(m, d) predict(m, d, type = 'prob')[,5]
+pred_Running <- function(m, d) predict(m, d, type = 'prob')[,6]
+
+explainer_Standing <- explain(model = rf_mdl$finalModel, 
+                              data = fall_train[,2:7], 
+                              y = fall_train$ACTIVITY == "Standing", 
+                              predict_function = pred_Standing, 
+                              label = "Standing")
+explainer_Walking <- explain(model = rf_mdl$finalModel, 
+                             data = fall_train[,2:7], 
+                             y = fall_train$ACTIVITY == "Walking", 
+                             predict_function = pred_Walking, 
+                             label = "Walking")
+explainer_Sitting <- explain(model = rf_mdl$finalModel, 
+                             data = fall_train[,2:7], 
+                              y = fall_train$ACTIVITY == "Sitting", 
+                              predict_function = pred_Sitting, 
+                              label = "Sitting")
+explainer_Falling <- explain(model = rf_mdl$finalModel, 
+                             data = fall_train[,2:7], 
+                              y = fall_train$ACTIVITY == "Falling", 
+                              predict_function = pred_Falling, 
+                              label = "Falling")
+explainer_Cramps <- explain(model = rf_mdl$finalModel, 
+                            data = fall_train[,2:7], 
+                            y = fall_train$ACTIVITY == "Cramps", 
+                            predict_function = pred_Cramps, 
+                            label = "Cramps")
+explainer_Running <- explain(model = rf_mdl$finalModel, 
+                             data = fall_train[,2:7], 
+                              y = fall_train$ACTIVITY == "Running", 
+                              predict_function = pred_Running, 
+                              label = "Running")
+cp_Standing <- ceteris_paribus(explainer = explainer_Standing, 
+                               observations = fall_test[15,],
+                               y =fall_test$ACTIVITY[15]=="Standing")
+cp_Walking <- ceteris_paribus(explainer_Walking, 
+                              observations =  fall_test[15,],
+                              y =fall_test$ACTIVITY[15]=="Walking")
+cp_Sitting <- ceteris_paribus(explainer_Sitting, 
+                              observations = fall_test[15,],
+                              y =fall_test$ACTIVITY[15]=="Sitting")
+cp_Falling <- ceteris_paribus(explainer_Falling, 
+                              observations = fall_test[15,],
+                              y =fall_test$ACTIVITY[15]=="Falling")
+cp_Cramps <- ceteris_paribus(explainer_Cramps, 
+                             observations = fall_test[15,],
+                             y =fall_test$ACTIVITY[15]=="Cramps")
+cp_Running <- ceteris_paribus(explainer_Running, 
+                              observations = fall_test[15,],
+                              y =fall_test$ACTIVITY[15]=="Running")
+
+
+plot(cp_Standing, cp_Walking, cp_Sitting, cp_Falling, cp_Cramps, cp_Running,
+     alpha = 1, show_observations = FALSE, size_points = 4, color="_label_")
+
+
+# explanation for HR predictor
+plot(cp_Standing, cp_Walking, cp_Sitting, cp_Falling, cp_Cramps, cp_Running,
+     selected_variables = "HR",
+     alpha = 1, show_observations = TRUE, size_points = 4, color="_label_")
 
 
 # end of script ########################################################################################

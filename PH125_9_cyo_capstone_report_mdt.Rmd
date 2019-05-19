@@ -1,7 +1,7 @@
 ---
 title: "PH125_9 Choose Your Own Capstone Project"
 author: "Mario De Toma"
-date: "February 28, 2019"
+date: "May 26, 2019"
 output: pdf_document
 ---
 
@@ -45,7 +45,7 @@ This report is articulated in the following sections:
 
 - *Methods*: where the dataset is explored in order to find some insight, then the design of the study is explained and different models are proposed. Finally the modeling will be described in details.
 
-- *Results*: showing actual results achieved and models evaluation compared
+- *Results*: showing actual results achieved and models evaluation compared, furthermore a procedure is shown in order to explain the loca behavior of the best model
 
 - *Conclusions*: summarizing achievement, discussing the project and indicate potential  model improvement
 
@@ -456,6 +456,98 @@ Multinomial model tends to perform badly on the Fall Detection dataset because p
 Better accuracy performance can be achieved with kNN a memory based algorithm but with a small number k of neighbors reveiling an intrinsic complexity.
 Random Forest model predicts with a good accuracy all 6 ADLs because trees understand interactions between predictors.
 
+## Interpretation
+RandomForest model achieved a good accuracy result but it remains a black-box model with low interpretability even if considering the variable importance side result.
+This consideration about interpretability seems to be almost generalizable in respect to machine learning black-box methods adoption: among relevant literature it is possible to mention the provoking titled paper "Why should I trust you? ..." [7] and the as much provoking book "Weapons of Math Destruction ..." [8].
+So in order to provide explanation about the model result that can be validated by domain expert, a "ceteris paribus" analysis has been performed.
+The concept behind this kind of analysis is very simple: take one or more single predictions of interest for domain expert and analyze what the model have learned varying only one predictor at a time keeping all other variable unchanged (this is the meaning of latin word 'ceteris paribus': all else unchanged).
+The prediction selected is:
+```{r  prediction selected, echo=FALSE}
+knitr::kable(fall_test[15,])
+```
+The analysis for multiclass classification follow the procedure documented at https://pbiecek.github.io/DALEX_docs/5-5-cetParLocalMulticlass.html#cetParLocalMulticlass for using "cerisParibus" package [9].
+```{r ceteris paribus analysis, echo=FALSE}
+if(!require(DALEX)) {
+  install.packages("DALEX", repos = "http://cran.us.r-project.org")
+  library(DALEX)
+}
+if(!require(ceterisParibus)) {
+  install.packages("ceterisParibus", repos = "http://cran.us.r-project.org")
+  library(ceterisParibus)
+}
+pred_Standing <- function(m, d) predict(m, d, type = 'prob')[,1]
+pred_Walking <- function(m, d) predict(m, d, type = 'prob')[,2]
+pred_Sitting <- function(m, d) predict(m, d, type = 'prob')[,3]
+pred_Falling <- function(m, d) predict(m, d, type = 'prob')[,4]
+pred_Cramps <- function(m, d) predict(m, d, type = 'prob')[,5]
+pred_Running <- function(m, d) predict(m, d, type = 'prob')[,6]
+
+explainer_Standing <- explain(model = rf_mdl$finalModel, 
+                              data = fall_train[,2:7], 
+                              y = fall_train$ACTIVITY == "Standing", 
+                              predict_function = pred_Standing, 
+                              label = "Standing")
+explainer_Walking <- explain(model = rf_mdl$finalModel, 
+                             data = fall_train[,2:7], 
+                             y = fall_train$ACTIVITY == "Walking", 
+                             predict_function = pred_Walking, 
+                             label = "Walking")
+explainer_Sitting <- explain(model = rf_mdl$finalModel, 
+                             data = fall_train[,2:7], 
+                              y = fall_train$ACTIVITY == "Sitting", 
+                              predict_function = pred_Sitting, 
+                              label = "Sitting")
+explainer_Falling <- explain(model = rf_mdl$finalModel, 
+                             data = fall_train[,2:7], 
+                              y = fall_train$ACTIVITY == "Falling", 
+                              predict_function = pred_Falling, 
+                              label = "Falling")
+explainer_Cramps <- explain(model = rf_mdl$finalModel, 
+                            data = fall_train[,2:7], 
+                            y = fall_train$ACTIVITY == "Cramps", 
+                            predict_function = pred_Cramps, 
+                            label = "Cramps")
+explainer_Running <- explain(model = rf_mdl$finalModel, 
+                             data = fall_train[,2:7], 
+                              y = fall_train$ACTIVITY == "Running", 
+                              predict_function = pred_Running, 
+                              label = "Running")
+cp_Standing <- ceteris_paribus(explainer = explainer_Standing, 
+                               observations = fall_test[15,],
+                               y =fall_test$ACTIVITY[15]=="Standing")
+cp_Walking <- ceteris_paribus(explainer_Walking, 
+                              observations =  fall_test[15,],
+                              y =fall_test$ACTIVITY[15]=="Walking")
+cp_Sitting <- ceteris_paribus(explainer_Sitting, 
+                              observations = fall_test[15,],
+                              y =fall_test$ACTIVITY[15]=="Sitting")
+cp_Falling <- ceteris_paribus(explainer_Falling, 
+                              observations = fall_test[15,],
+                              y =fall_test$ACTIVITY[15]=="Falling")
+cp_Cramps <- ceteris_paribus(explainer_Cramps, 
+                             observations = fall_test[15,],
+                             y =fall_test$ACTIVITY[15]=="Cramps")
+cp_Running <- ceteris_paribus(explainer_Running, 
+                              observations = fall_test[15,],
+                              y =fall_test$ACTIVITY[15]=="Running")
+
+
+plot(cp_Standing, cp_Walking, cp_Sitting, cp_Falling, cp_Cramps, cp_Running,
+     alpha = 1, show_observations = FALSE, size_points = 4, color="_label_")
+
+```
+In order to understand how the resulting plot should be analysed it is useful to focus on HR variable plot.
+```{r varying HR plot, echo=FALSE}
+plot(cp_Standing, cp_Walking, cp_Sitting, cp_Falling, cp_Cramps, cp_Running,
+     selected_variables = "HR",
+     alpha = 1, show_observations = TRUE, size_points = 4, color="_label_")
+```
+
+It is a local analysis. At the selected prediction the probability of "Falling" is way higher than for other ADLs. There is a range varying HR in which predicted probabilities remain the same.
+Decreasing a little HR Heart Beat Rate does not change the prediction while below about 300 the most probable ADLs become "Standing".
+Also increasing HR till about 350 the model mantain the prediction at "Falling".
+Without any domain expertise it is impossible to say if physiology theory can support the result learned by our model, but this is why generally Data Science Team includes domain experts together with Data Scientists.
+
 # Conclusions
 Going back to our research question, it is possible to state that ADLs can be predicted from basic health measuree with an accuracy over 77%.
 This means that the best model guesses the right ADL among 6 more than 3 times over 4. It is a remarkable result.
@@ -468,6 +560,8 @@ Results can be considered valid because of this 3 main reasons:
 - test and training/validation set contains thousands of observaions
 
 - all used machine learning techniques are consolidated
+
+- ceteris paribus analysis presented is a way to validate the model consistency with domain theory
 
 ## Limitations
 This project is a data science project in the context of supervised learning focused on the study of prediction.
@@ -528,7 +622,7 @@ sessionInfo()
 ```
 
 ## Computation time
-Sourcing the script containing all the analysis on my laptop configured as above took about 138 seconds to complete.
+Sourcing the script containing all the analysis on my laptop configured as above took less than 3 minutes to complete.
 
 # Acknowledgments
 I gratefully aknowledge the efforts of Professor Rafael Irizarry and all HarvardX  Course staff for teaching this learning path towards a deeper understanding of Data Science. 
@@ -538,10 +632,28 @@ I gratefully aknowledge the efforts of Professor Rafael Irizarry and all Harvard
 
 [1] Özdemir, Ahmet Turan, and Billur Barshan. “Detecting Falls with Wearable Sensors Using Machine Learning Techniques.” Sensors (Basel, Switzerland) 14.6 (2014): 10691–10708. PMC. Web. 23 Apr. 2017.
 
-[2] Rafael Irizarry (2018). Introduction to Data Science. Data Analysis and Prediction Algorithms with R. Chapters 71, 72 and 73 https://rafalab.github.io/dsbook/
+[2] Rafael Irizarry (2018). Introduction to Data Science. Data Analysis and Prediction Algorithms with R. Chapters 30, 31, 32 and 33 https://rafalab.github.io/dsbook/
 
 [3] Max Kuhn. Contributions from Jed Wing, Steve Weston, Andre Williams, Chris Keefer,
 Allan Engelhardt, Tony Cooper, Zachary Mayer, Brenton Kenkel, the R Core Team, Michael Benesty, Reynald Lescarbeau, Andrew Ziem, Luca Scrucca, Yuan Tang, Can Candan and Tyler Hunt. (2018). caret: Classification and Regression Training. R package version 6.0-81. https://CRAN.R-project.org/package=caret
+
+[4] Venables, W. N. & Ripley, B. D. (2002) Modern Applied Statistics with S. Fourth
+  Edition. Springer, New York. ISBN 0-387-95457-0
+  
+[5] David Meyer, Evgenia Dimitriadou, Kurt Hornik, Andreas Weingessel and Friedrich
+  Leisch (2019). e1071: Misc Functions of the Department of Statistics, Probability
+  Theory Group (Formerly: E1071), TU Wien. R package version 1.7-1.
+  https://CRAN.R-project.org/package=e1071
+  
+[6] A. Liaw and M. Wiener (2002). Classification and Regression by randomForest. R News 2(3), 18--22.
+
+[7] Ribeiro, M.T., Singh, S., & Guestrin, C. (2016). "Why Should I Trust You?": Explaining the Predictions of Any Classifier. HLT-NAACL Demos.
+
+[8] O'NEIL, C. (2016). Weapons of math destruction: how big data increases inequality and threatens democracy.
+
+[9] Przemyslaw Biecek (2019). ceterisParibus: Ceteris Paribus
+  Profiles. R package version 0.3.1.
+  https://CRAN.R-project.org/package=ceterisParibus
 
 ***
 \centering
