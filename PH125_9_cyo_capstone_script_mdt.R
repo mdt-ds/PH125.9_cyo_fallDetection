@@ -1,5 +1,4 @@
 # Script Header ----
-# Script Header ----
 # File-Name:      PH125_9_cyo_capstone_script_mdt.R
 # Date:           May 26, 2019                                   
 # Author:         Mario De Toma <mdt.datascience@gmail.com>
@@ -51,7 +50,7 @@ rm(data_file_path, train_idx)
 
 # exploratory data analysis ----
 
-# 0- Standing 1- Walking 2- Sitting 3- Falling 4- Cramps 5- Running
+# factorizing ACTIVITY
 fall_train <- fall_train %>% mutate(ACTIVITY = factor(ACTIVITY, 
                              labels = c('Standing', 'Walking', 'Sitting', 
                                         'Falling', 'Cramps', 'Running')))
@@ -215,7 +214,7 @@ test_results <- test_results %>% add_row(method = 'knn', accuracy = test_accurac
 
 # modeling with randomForest ----
 modelLookup(model = 'rf')
-tunegrid <- data.frame(mtry= seq(1, 5, 1))
+tunegrid <- data.frame(mtry= seq(1, 6, 1))
 
 if(!require(randomForest)) {
   install.packages("randomForest", repos = "http://cran.us.r-project.org")
@@ -256,7 +255,7 @@ test_results %>% knitr::kable()
 # selected prediction
 knitr::kable(fall_test[15,])
 
-# ceteris paribus analysis
+# ceteris paribus analysis as per online documentation
 if(!require(DALEX)) {
   install.packages("DALEX", repos = "http://cran.us.r-project.org")
   library(DALEX)
@@ -265,6 +264,7 @@ if(!require(ceterisParibus)) {
   install.packages("ceterisParibus", repos = "http://cran.us.r-project.org")
   library(ceterisParibus)
 }
+# prediction functions, one for each ADL
 pred_Standing <- function(m, d) predict(m, d, type = 'prob')[,1]
 pred_Walking <- function(m, d) predict(m, d, type = 'prob')[,2]
 pred_Sitting <- function(m, d) predict(m, d, type = 'prob')[,3]
@@ -272,6 +272,7 @@ pred_Falling <- function(m, d) predict(m, d, type = 'prob')[,4]
 pred_Cramps <- function(m, d) predict(m, d, type = 'prob')[,5]
 pred_Running <- function(m, d) predict(m, d, type = 'prob')[,6]
 
+# DALEX explainers, one for each ADL
 explainer_Standing <- explain(model = rf_mdl$finalModel, 
                               data = fall_train[,2:7], 
                               y = fall_train$ACTIVITY == "Standing", 
@@ -302,6 +303,8 @@ explainer_Running <- explain(model = rf_mdl$finalModel,
                               y = fall_train$ACTIVITY == "Running", 
                               predict_function = pred_Running, 
                               label = "Running")
+
+# ceteris paribus profiles, one for each ADL
 cp_Standing <- ceteris_paribus(explainer = explainer_Standing, 
                                observations = fall_test[15,],
                                y =fall_test$ACTIVITY[15]=="Standing")
@@ -321,12 +324,12 @@ cp_Running <- ceteris_paribus(explainer_Running,
                               observations = fall_test[15,],
                               y =fall_test$ACTIVITY[15]=="Running")
 
-
+# plotting ceteris paribus profiles for the prediction of interest
 plot(cp_Standing, cp_Walking, cp_Sitting, cp_Falling, cp_Cramps, cp_Running,
      alpha = 1, show_observations = FALSE, size_points = 4, color="_label_")
 
 
-# explanation for HR predictor
+# explanation of HR predictor for the prediction of interest
 plot(cp_Standing, cp_Walking, cp_Sitting, cp_Falling, cp_Cramps, cp_Running,
      selected_variables = "HR",
      alpha = 1, show_observations = TRUE, size_points = 4, color="_label_")

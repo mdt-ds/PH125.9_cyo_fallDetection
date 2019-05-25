@@ -14,9 +14,9 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ## Objectives
 *Motivation)*
 This project has been conducted as part of the Data Science Professional Certification path provided by  HarvardX, an online learning initiative of Harvard University through edX.
-In particular this is the second data science projet to submit for PH125.9x course denominated "Data Science: Capstone".
-The name of the project, Choose Your Own, is due to the fact that the data set under analysis could be chosen by the learner from public available dataset. 
-I choose the Fall Detection dataset from the curated list of datasets at the following link https://www.kaggle.com/annavictoria/ml-friendly-public-datasets?utm_medium=email&utm_source=intercom&utm_campaign=data+projects+onboarding as suggested by course staff. 
+In particular this is the second data science project to submit for PH125.9x Course denominated "Data Science: Capstone".
+The name of the project, Choose Your Own, is due to the fact that the dataset under analysis could be chosen by the learner from public available datasets. 
+I chose the Fall Detection dataset from the curated list of datasets at the following link https://www.kaggle.com/annavictoria/ml-friendly-public-datasets?utm_medium=email&utm_source=intercom&utm_campaign=data+projects+onboarding , a repository indicated by Course Staff. 
 
 *Project objective)*
 As per course project introduction the project aim is to apply machine learning techniques that go beyond standard linear regression. In particular the task of this project is  multi class classification i.e. where the outcome variable is categorical with more than 2 classes. Specifically the problem statement is related to predict the type of activity among 6 different activities of daily living (ADLs) on the basis of monitored medical measures obtained through sensors worn by elder people.
@@ -26,33 +26,33 @@ As per course project introduction the project aim is to apply machine learning 
 The research question can be stated as:
 is it possible to predict 6 activities of daily living (ADLs) including Standing , Walking, Sitting, Falling,  Cramps, Running from few predictors monitoring health status?
 
-This project is not intended to solve the problem of Fall Detection which could be settled by binarysing the ADL information as Falling vs all the remaining activities.
+This project is not intended to solve the problem of "Fall Detection" which could be settled by binarysing the ADL information as Falling vs all the remaining activities.
 
 Furthermore note that no causal inference claim can be raised after this study that focus only on supervised learning.
 
 *Dataset)*
 Fall detection data set of Chinese hospitals of old age patients [1] is hosted by kaggle. 
-It reports 16382 observations containing the ADL label and related 6 predictors.
+It reports 16382 observations containing the ADL label and related 6 numerical predictors.
 
 ## Background
-Starting point for conducting this study is the supervised leaning process as decribed by Professor Rafael Irizarry in the PH125_8 edX course on Machine Learning and in his book: Introduction to Data Science [2].
-In particular study is conducted using the 'caret' R package framework for machine learning [3].
+Starting point for conducting this study was the supervised leaning process as decribed by Professor Rafael Irizarry in the PH125_8 edX course on Machine Learning and in his book: Introduction to Data Science [2].
+In particular this study was conducted using the R package 'caret' as framework for machine learning [3].
 
 ## Overview and outline
-The study demonstrates that ADL can be predicted and that reachable accuracy of prediction depends on the model chosen.
+The study demonstrates that ADLs can be predicted and that the reachable accuracy of prediction depends on the model chosen.
 
-This report is articulated in the following sections:
+Thesrest of this report is articulated in the following sections:
 
-- *Methods*: where the dataset is explored in order to find some insight, then the design of the study is explained and different models are proposed. Finally the modeling will be described in details.
+- *Methods*: in this section the dataset is explored in order to find useful insight, then the design of the study is explained and different models are proposed. Finally the modeling is described in details.
 
-- *Results*: showing actual results achieved and models evaluation compared, furthermore a procedure is shown in order to explain the loca behavior of the best model
+- *Results*: this section shows actual results achieved and compares diverse models evaluation. Furthermore, in order to explain the local behavior of the best model, the ceteris paribus analysis procedure is shown
 
-- *Conclusions*: summarizing achievement, discussing the project and indicate potential  model improvement
+- *Conclusions*: the section summarizes achievement, it discusses the project validity and it indicates potential  model improvements
 
-- *Reproducibility*: providing information related to the reproducibility of the analysis including computation considerations, HW and SW stack used.
+- *Reproducibility*: this section provides information related to the reproducibility of the analysis including computation considerations, HW and SW stack used.
 
 # Methods
-In order to answer the research question posed in the introcuction section, the dataset Fall Detection has been analyzed and then the machine learning experiments consucted using different machine learning tecniques adequate for the multi class classificaion task.
+In order to answer the research question posed in the introcuction section, the dataset Fall Detection has been analyzed and then the machine learning experiments conducted using different machine learning tecniques adequate for the multi class classificaion task.
 
 ```{r libraries, include=FALSE }
 if(!require(tidyverse)) {
@@ -66,7 +66,8 @@ if(!require(caret)) {
 ```
 
 ## Exploratory Data Analysis
-Fall detection dataset has been downloaded from kaggle, put on my github and then loaded into R and partitioned such that 70% of the observations belong to the training set and 30% the test set. The caret::createDataPartition function has been used in order to mantain the class distribution between train and test set.
+Fall detection dataset has been downloaded from kaggle, put on my github and then loaded into R and partitioned such that 70% of the observations belong to the training set (fall_train) and 30% the test set (fall_test). The caret::createDataPartition function has been used in order to mantain the class distribution between train and test set so that the main assumption of every prediction study is respected:
+train, test and future "production" data all come from the same data generating process producing the same distribution.
 ```{r load data, message=FALSE, include=FALSE}
 data_file_path <- 'https://raw.githubusercontent.com/mdt-ds/PH125.9_cyo_fallDetection/master/falldeteciton.csv'
 fall_detection <- read_csv(file = data_file_path)
@@ -82,8 +83,8 @@ Fall Detection dataset contains the following valriables:
 ```{r Fall Detection structure, echo=FALSE}
 glimpse(fall_train)
 ```
-The class label ACTIVITY is a numeric variable. It had been converted to a factor with following levels: 0- Standing 1- Walking 2- Sitting 3- Falling 4- Cramps 5- Running
-```{r label}
+The outcome variable ACTIVITY is numeric. In order to enable classification it has been converted to a factor with the following levels: Standing, Walking, Sitting, Falling, Cramps, Running.
+```{r labels}
 fall_train <- fall_train %>% mutate(ACTIVITY = factor(ACTIVITY, 
                              labels = c('Standing', 'Walking', 'Sitting', 
                                         'Falling', 'Cramps', 'Running')))
@@ -103,7 +104,7 @@ ggplot(fall_train, aes(ACTIVITY)) +
 ```
 
 ### Predictors discriminative power
-Predictors for ADL in Fall Detection dataset are:
+Predictors for ADL in Fall Detection dataset are all numeric and specifically are:
 
 - TIME monitoring time
 
@@ -115,9 +116,9 @@ Predictors for ADL in Fall Detection dataset are:
 
 - HR Heart beat rate
 
-- CIRCLUATION Blood circulation
+- CIRCLUATION Blood circulation (the typo in the original dataset has been kept)
 
-In order to check single predictor capacity to discriminate among classes, for each predictor the boxplot by class has been drawn.
+In order to check single predictor capacity to discriminate among classes, the boxplot by class for each predictor has been drawn.
 
 ```{r boxplot by ADL, echo=FALSE}
 timeBP <- ggplot(fall_train, aes(ACTIVITY, TIME)) +
@@ -168,10 +169,10 @@ grid.arrange(timeBP, slBP, bloodBP, hrBP, circBP, eegBP,
               nrow = 3, ncol = 2, newpage = TRUE)
 
 ```
-The discriminative power of single predictors does not seem to be enough to classify ADL. 
+Considering the predictor by class distributions overlapping, the discriminative power of single predictors does not seem to be enough to classify ADL wiht a good accuracy. 
 
 ### Predictors correlation
-Further element of analysis is related to high level of correlation between predictors.
+Further element of analysis is related to the high level of correlation among predictors.
 
 ```{r corr, echo=FALSE}
 if(!require(GGally)) {
@@ -180,10 +181,11 @@ if(!require(GGally)) {
 }
 ggpairs(fall_train %>% select(-ACTIVITY), axisLabels = 'none')
 ```
-In particular SL (sugar level) and CIRCLUATION (blood circulation) with a correlation of 0.977 and TIME (monitoring time) and HR (heart beat rate) with a correlation of 0.974 are almost colinear. Also HR and CIRCULATION (0.904), HR with SL (0.857) and TIME with CIRCULATION (0.877) correlations are really high.
+In particular SL (sugar level) and CIRCLUATION (blood circulation) with a correlation of 0.977 and TIME (monitoring time) and HR (heart beat rate) with a correlation of 0.974 are almost colinear. Also HR and CIRCULATION (0.904), HR with SL (0.857) and TIME with CIRCLUATION (0.877) correlations are really high.
 
 ### Feature importance
-The feature importance has been therefore investigated through the random forest algorithm which provide as a side outcome the importance of a feature in discriminating one class from the other. In other words, for random forest algorithm is easy to compute how much each variable is contributing to the classification decision.
+The feature importance has been therefore investigated through the random forest algorithm which provide as a side outcome the importance of a feature in discriminating one class from the other. In other words, for random forest algorithm it is easy to compute how much each variable is contributing to the classification decision.
+
 ```{r varImp, echo=FALSE}
 if(!require(randomForest)) {
   install.packages("randomForest", repos = "http://cran.us.r-project.org")
@@ -193,10 +195,10 @@ if(!require(randomForest)) {
 rf_mdl <- randomForest(ACTIVITY ~ ., data = fall_train)
 varImpPlot(rf_mdl)
 ```
-From the plot, SL is the most important predictor followed by EEG but all 6 are are of great help in the classification attempt.
+From the plot, SL results the most important predictor followed by EEG but all 6 predictors are of great help in the classification attempt since each contributes to decrease the GINI index measuring the decrease in node impurities from splitting on the variable, averaged over all trees.
 
 ## Proposed models
-In order to accomplish the multi class classification task the followin models has been tried:
+In order to accomplish the multi class classification task the following models have been tried:
 
 - multinomial
 
@@ -204,23 +206,23 @@ In order to accomplish the multi class classification task the followin models h
 
 - random forest
 
-All the models are natural choice for multi class classification.
+All the models are natural choices for multi class classification.
 
 ## Study design
-The study will be conducted using the training set, fall_train, for training and tuning of hyperparameters through cross validation while the final accuracy will be evaluated on the test set, fall_test.
+The study has been conducted using the training set, fall_train, for training the model and tuning hyperparameters through cross validation while the final accuracy has been evaluated on the test set, fall_test.
 
-The test dataset is not used in any former phase of the study and therefore it can simulate new data allowing to evaluate the capacity to generalize of the model.
+The test dataset has not been used in any former phase of the study and therefore it could simulate new data and it allowed to evaluate the capacity of the model to generalize .
 
-Accuracy metric has been used to evaluate different models. For each model the confusion matrix will be produced in order to evaluate which class is harder to identify.
+Accuracy metric has been used to evaluate and compare different models. For each model the confusion matrix has been produced in order to evaluate which class is harder to identify.
 
-Cross validation has been configured in caret machine learning framework with 5 folds (80% for training, 20% for validation)
+Cross validation has been configured in caret machine learning framework with 5 folds (80% for training, 20% for validation).
 
 ```{r train control}
 ctrl <- trainControl(method = 'cv', number = 5, p = .8)
 ```
 
 Cross validation lead to long computation times because in the defined study design the model has to be trained and validated 5 times.
-Therefore cross validation computation has been parallelized making use of doParallel package and of the multithread architecture of the laptop used for this project.
+Therefore cross validation computation has been parallelized making use of doParallel package [4] and of the multithread architecture of the HW used for this project.
 ```{r parallel, message=FALSE, warning=FALSE, include=FALSE}
 if(!require(doParallel)) {
   install.packages("doParallel", repos = "http://cran.us.r-project.org")
@@ -232,12 +234,14 @@ if(!require(doParallel)) {
 ## Multinomial Logistic Regression
 Multinomial logistic regression is a classification method that generalizes logistic regression to multiclass problems. The probability to belong to a particular class given the predictors is formulated as:
 
-$P(y=k|x^{(i)},\theta)=\frac{\exp(\theta^{(k)T}x^{(i)})}{\sum_{j=1}^k\exp(\theta^{(j)T}x^{(i)})}$
+$$P(y=k|x^{(i)},\theta)=\frac{\exp(\theta^{(k)T}x^{(i)})}{\sum_{j=1}^k\exp(\theta^{(j)T}x^{(i)})}$$
 
-It is called also softmax regression.
+where k is the class to be predicted, $x^{(i)}$ the features vector for observation $^{(i)}$ and $\theta$ the coefficient vector learned by the learner algorithm for each class.
 
-The multinomial model is implemented in r via neural networks by 'nnet' package.
-Under the 'caret' it is possible to tune the following parameter:
+It is also called softmax regression.
+
+The multinomial model is implemented in R via neural networks by 'nnet' package [5].
+Under the 'caret' framework it is possible to tune the following parameter:
 ```{r multinomParam, echo=FALSE}
 modelLookup(model = 'multinom')
 ```
@@ -291,9 +295,8 @@ test_accuracy_multinom <- confusionMatrix(data = y_hat, reference = fall_test$AC
 paste('model test accuracy:', round(test_accuracy_multinom, 5), sep = '   ')
 ```
 As per this results, the multinomial model can be discarded.
-In some sense the bad accuracy results were expected since predictors are correlated and interconnected while multinomial as a type of general linear model has difficulty in getting the interactions.
-Furtermore we can see from the confusion matrix that Walking ADL is never predicted probably because it has few occurrence in the dataset.
-Also Running ADL is never predicted.
+In some sense the bad accuracy results were expected since predictors are correlated and interconnected while multinomial model, as a type of generalized linear model, does not take into account interactions if not expressely defined in the model.
+Furtermore we can see from the confusion matrix that Walking and Running ADLs are never predicted probably because they have few occurrences in the dataset in respect of other ADLs.
 ```{r multinom test result, include=FALSE}
 test_results <- tibble(method = 'multinom', accuracy = test_accuracy_multinom)
 
@@ -303,16 +306,16 @@ test_results <- tibble(method = 'multinom', accuracy = test_accuracy_multinom)
 ## k Nearest Neighbour
 k Nearest Neighbors is a non-parametric classification method that make use of distance (or similarity) measures. In particular for numerical predictors the euclidean distance is used. Euclidean distance is the length of the segment connecting 2 data points in the predictor space and it is defined as:
 
-$d(\overrightarrow{x}^{(i)},\overrightarrow{x}^{(j)}) = \sqrt{(x_1^{(i)}-x_1^{(j)})^2+(x_2^{(i)}-x_2^{(j)})^2+...+(x_p^{(i)}-x_p^{(j)})^2}$
+$$d(\overrightarrow{x}^{(i)},\overrightarrow{x}^{(j)}) = \sqrt{(x_1^{(i)}-x_1^{(j)})^2+(x_2^{(i)}-x_2^{(j)})^2+...+(x_p^{(i)}-x_p^{(j)})^2}$$
 
 The kNN algorithm stored all the data and classify new data points in relation of majority of k nearest (as per euclidean distance) points class.
 
-The k Nearest Neighbors model is implemented in r by 'e1071' package.
+The k Nearest Neighbors model is implemented in R by 'e1071' package [6].
 Under the 'caret' machine learning famework it is possible to tune the following parameter:
 ```{r knnParam, echo=FALSE}
 modelLookup(model = 'knn')
 ```
-As parameter k increase the decision boundary get more smooth. It can be thought as a mean of regurarizaion.
+As parameter k increase the decision boundary get more smooth. It can be thought as a mean of regularizaion.
 The training process will go through the following value for hyperparameters
 ```{r knn tune}
 tunegrid <- data.frame(k= seq(1, 30, 1))
@@ -368,7 +371,7 @@ test_accuracy_knn <- confusionMatrix(data = y_hat, reference = fall_test$ACTIVIT
 paste('model test accuracy:', round(test_accuracy_knn, 5), sep = '   ')
 ```
 kNN model succeed in classifying all 6 ADLs and it gets a good accuracy score considering that we have 6 class. Even Walking despite of class small numerosity is predicted with good accuracy.
-The best model is obtained with a quite small k, a complex model, as expected because of the interactions among predictors.
+The best model is obtained with a quite small k, indicating a complex model so more subject to overfitting.
 
 ```{r knn test result, include=FALSE}
 test_results <- test_results %>% add_row(method = 'knn', accuracy = test_accuracy_knn)
@@ -380,17 +383,19 @@ test_results <- test_results %>% add_row(method = 'knn', accuracy = test_accurac
 Random Forest algorithm builds multiple decision trees and merges them together to get a more accurate and stable prediction reducing variance and avoiding overfitting in respect of the single decision tree.
 Random forest improves the predictive performance of decision tree through bagging, averaging models learned on multiple boostrapped samples from the original dataset,  and randomly selecting the predictors among which identify the one for partitioning data so that purest node are created at each split. 
 
-The Random Forest model is implemented in r by 'randomForest' package.
-Under the 'caret' it is possible to tune the following parameter:
+The Random Forest model is implemented in R by 'randomForest' package [7].
+Under the 'caret' framework it is possible to tune the following parameter:
 ```{r rfParam, echo=FALSE}
 modelLookup(model = 'rf')
 ```
 that set the number of variables randomly sampled as candidates at each split.
 
-The training process will go through the following value for hyperparameters
+The training process went through the following value for hyperparameters
 ```{r rf tune}
-tunegrid <- data.frame(mtry= seq(1, 5, 1))
+tunegrid <- data.frame(mtry= seq(1, 6, 1))
 ```
+
+Setting mtry equal to the numbers of predictor is only bagging not exactly random forest (trees are not decorrelated because all trees use all the predictors) and it is expected to obtain a worse accuracy.
 
 ```{r rf, message=FALSE, warning=FALSE, cache=TRUE, include=FALSE}
 if(!require(randomForest)) {
@@ -454,18 +459,21 @@ test_results %>% knitr::kable()
 
 Multinomial model tends to perform badly on the Fall Detection dataset because predictors are heavily correlated.
 Better accuracy performance can be achieved with kNN a memory based algorithm but with a small number k of neighbors reveiling an intrinsic complexity.
-Random Forest model predicts with a good accuracy all 6 ADLs because trees understand interactions between predictors.
+Random Forest model predicts with a good accuracy all 6 ADLs because trees understand interactions among predictors.
 
 ## Interpretation
-RandomForest model achieved a good accuracy result but it remains a black-box model with low interpretability even if considering the variable importance side result.
-This consideration about interpretability seems to be almost generalizable in respect to machine learning black-box methods adoption: among relevant literature it is possible to mention the provoking titled paper "Why should I trust you? ..." [7] and the as much provoking book "Weapons of Math Destruction ..." [8].
-So in order to provide explanation about the model result that can be validated by domain expert, a "ceteris paribus" analysis has been performed.
-The concept behind this kind of analysis is very simple: take one or more single predictions of interest for domain expert and analyze what the model have learned varying only one predictor at a time keeping all other variable unchanged (this is the meaning of latin word 'ceteris paribus': all else unchanged).
-The prediction selected is:
+RandomForest model achieved a good accuracy result but it is a black-box model with low interpretability even if considering the variable importance side result.
+The interpretability issue related to machine learning black-box methods adoption has become relevant and a subject of discussion in the data science community. In this regard it is possible to mention the provoking titled paper "Why should I trust you? ..." [8] and the equally provoking book "Weapons of Math Destruction ..." [9].
+
+So in order to provide explanation about the model result that could be validated by domain experts, a "ceteris paribus" analysis has been performed.
+The concept behind this kind of analysis is very simple: one or more single predictions of interest for domain experts is taken under consideration and then  varying only one predictor at a time keeping all other variable unchanged (this is the meaning of latin word 'ceteris paribus': all else unchanged) what the model have learned can be assessed.
+As an example the prediction selected is:
 ```{r  prediction selected, echo=FALSE}
 knitr::kable(fall_test[15,])
 ```
-The analysis for multiclass classification follow the procedure documented at https://pbiecek.github.io/DALEX_docs/5-5-cetParLocalMulticlass.html#cetParLocalMulticlass for using "cerisParibus" package [9].
+
+The analysis for multiclass classification has been performed following the procedure documented at https://pbiecek.github.io/DALEX_docs/5-5-cetParLocalMulticlass.html#cetParLocalMulticlass for using "cerisParibus" package [10].
+
 ```{r ceteris paribus analysis, echo=FALSE}
 if(!require(DALEX)) {
   install.packages("DALEX", repos = "http://cran.us.r-project.org")
@@ -475,6 +483,8 @@ if(!require(ceterisParibus)) {
   install.packages("ceterisParibus", repos = "http://cran.us.r-project.org")
   library(ceterisParibus)
 }
+
+# prediction functions, one for each ADL
 pred_Standing <- function(m, d) predict(m, d, type = 'prob')[,1]
 pred_Walking <- function(m, d) predict(m, d, type = 'prob')[,2]
 pred_Sitting <- function(m, d) predict(m, d, type = 'prob')[,3]
@@ -482,6 +492,7 @@ pred_Falling <- function(m, d) predict(m, d, type = 'prob')[,4]
 pred_Cramps <- function(m, d) predict(m, d, type = 'prob')[,5]
 pred_Running <- function(m, d) predict(m, d, type = 'prob')[,6]
 
+# DALEX explainers, one for each ADL
 explainer_Standing <- explain(model = rf_mdl$finalModel, 
                               data = fall_train[,2:7], 
                               y = fall_train$ACTIVITY == "Standing", 
@@ -512,6 +523,8 @@ explainer_Running <- explain(model = rf_mdl$finalModel,
                               y = fall_train$ACTIVITY == "Running", 
                               predict_function = pred_Running, 
                               label = "Running")
+
+# ceteris paribus profiles, one for each ADL
 cp_Standing <- ceteris_paribus(explainer = explainer_Standing, 
                                observations = fall_test[15,],
                                y =fall_test$ACTIVITY[15]=="Standing")
@@ -531,37 +544,40 @@ cp_Running <- ceteris_paribus(explainer_Running,
                               observations = fall_test[15,],
                               y =fall_test$ACTIVITY[15]=="Running")
 
-
+# plotting ceteris paribus profiles for the prediction of interest
 plot(cp_Standing, cp_Walking, cp_Sitting, cp_Falling, cp_Cramps, cp_Running,
      alpha = 1, show_observations = FALSE, size_points = 4, color="_label_")
 
 ```
-In order to understand how the resulting plot should be analysed it is useful to focus on HR variable plot.
+
+In order to understand how the resulting plot should be analysed it is useful to focus on only one variable plot: HR for example.
+
 ```{r varying HR plot, echo=FALSE}
+# explanation of HR predictor for the prediction of interest
 plot(cp_Standing, cp_Walking, cp_Sitting, cp_Falling, cp_Cramps, cp_Running,
      selected_variables = "HR",
      alpha = 1, show_observations = TRUE, size_points = 4, color="_label_")
 ```
 
-It is a local analysis. At the selected prediction the probability of "Falling" is way higher than for other ADLs. There is a range varying HR in which predicted probabilities remain the same.
+It is a local analysis. At the selected prediction the probability of "Falling" is way higher than for other ADLs. There is a range varying HR in which the prediction remains "Falling" even if predicted predicted probabilities change.
 Decreasing a little HR Heart Beat Rate does not change the prediction while below about 300 the most probable ADLs become "Standing".
 Also increasing HR till about 350 the model mantain the prediction at "Falling".
 Without any domain expertise it is impossible to say if physiology theory can support the result learned by our model, but this is why generally Data Science Team includes domain experts together with Data Scientists.
 
 # Conclusions
-Going back to our research question, it is possible to state that ADLs can be predicted from basic health measuree with an accuracy over 77%.
+Going back to our research question, it is possible to state that ADLs can be predicted from basic health measures with an accuracy over 77%.
 This means that the best model guesses the right ADL among 6 more than 3 times over 4. It is a remarkable result.
 
 ## Validity
 Results can be considered valid because of this 3 main reasons:
 
-- a consistent training / validation / test study design has been followed consistently for all models 
+- a training / validation / test study design has been followed consistently for all models 
 
-- test and training/validation set contains thousands of observaions
+- test and training/validation set contains thousands of observations
 
 - all used machine learning techniques are consolidated
 
-- ceteris paribus analysis presented is a way to validate the model consistency with domain theory
+Furthermore ceteris paribus analysis presented could represent a feasable way to validate the model consistency with domain theory.
 
 ## Limitations
 This project is a data science project in the context of supervised learning focused on the study of prediction.
@@ -575,9 +591,10 @@ Therefore the following 2 general limitations apply:
 ## Model improvements
 Future research should look at evaluating different machine learning tecniques such as implementing a deep neural network with enough hidden layers for getting all the interactions between predictors.
 Another possibility for increasing the accuracy of the prediction could be stacking: an ensemble method that builds a classification model at an upper level in regards of the studied models using prediction of the lower levels model as predictors for the upper level model.
+In the contest of an actual scientific study other explanatory tool could be investigated and used.
 
-## Implications
-This project helped me in consolidating
+## Implications for my course of study
+This project helped me in improving and consolidating:
 
 - my understanding of the data science research methodology;
 
@@ -592,15 +609,17 @@ R script and rmarkdown file are available for review on public github repository
 ![](images/GitHub-Mark-16px.png) https://github.com/mdt-ds/PH125.9_cyo_fallDetection .
 
 
-R scripts are intended to be reproducible. 
+R script is intended to be reproducible so: 
 
-- All package loading is checked for package installation.
+- all package loading is checked for package installation.
 
-- Directoty are all indicated in relative fashion. 
+- dataset is provided together with the code and loaded into R from my gitHub. 
 
-- Seed for random number generation has been set to guarantee reproducible results wherever it is needed
+- seed for random number generation has been set to guarantee reproducible results wherever it is needed
 
-- Furthermore in order to facilitate reproducibility, HW and SW used for this project have been reported below.
+- number  of cores for parallel computation has not been hardcoded but retrieved with parallel::detectCores() function
+
+- furthermore in order to facilitate reproducibility, HW and SW used for this project have been reported below.
 
 
 ## HW
@@ -622,38 +641,34 @@ sessionInfo()
 ```
 
 ## Computation time
-Sourcing the script containing all the analysis on my laptop configured as above took less than 3 minutes to complete.
+Sourcing the script containing all the analysis on my laptop configured as above took less than 4 minutes to complete.
 
 # Acknowledgments
-I gratefully aknowledge the efforts of Professor Rafael Irizarry and all HarvardX  Course staff for teaching this learning path towards a deeper understanding of Data Science. 
+I gratefully aknowledge the efforts of Professor Rafael Irizarry and all HarvardX  Course Staff for teaching this learning path towards a deeper understanding of Data Science. 
 
 
 # References
 
-[1] Özdemir, Ahmet Turan, and Billur Barshan. “Detecting Falls with Wearable Sensors Using Machine Learning Techniques.” Sensors (Basel, Switzerland) 14.6 (2014): 10691–10708. PMC. Web. 23 Apr. 2017.
+[1] Özdemir, Ahmet Turan, and Billur Barshan. “Detecting Falls with Wearable Sensors  Using Machine Learning Techniques.” Sensors (Basel, Switzerland) 14.6 (2014): 10691–10708. PMC. Web. 23 Apr. 2017.
 
 [2] Rafael Irizarry (2018). Introduction to Data Science. Data Analysis and Prediction Algorithms with R. Chapters 30, 31, 32 and 33 https://rafalab.github.io/dsbook/
 
 [3] Max Kuhn. Contributions from Jed Wing, Steve Weston, Andre Williams, Chris Keefer,
 Allan Engelhardt, Tony Cooper, Zachary Mayer, Brenton Kenkel, the R Core Team, Michael Benesty, Reynald Lescarbeau, Andrew Ziem, Luca Scrucca, Yuan Tang, Can Candan and Tyler Hunt. (2018). caret: Classification and Regression Training. R package version 6.0-81. https://CRAN.R-project.org/package=caret
 
-[4] Venables, W. N. & Ripley, B. D. (2002) Modern Applied Statistics with S. Fourth
-  Edition. Springer, New York. ISBN 0-387-95457-0
+[4] Microsoft Corporation and Steve Weston (2018). doParallel: Foreach Parallel Adaptor for the 'parallel' Package. R package version 1.0.14. https://CRAN.R-project.org/package=doParalle
+
+[5] Venables, W. N. & Ripley, B. D. (2002) Modern Applied Statistics with S. Fourth Edition. Springer, New York. ISBN 0-387-95457-0
   
-[5] David Meyer, Evgenia Dimitriadou, Kurt Hornik, Andreas Weingessel and Friedrich
-  Leisch (2019). e1071: Misc Functions of the Department of Statistics, Probability
-  Theory Group (Formerly: E1071), TU Wien. R package version 1.7-1.
-  https://CRAN.R-project.org/package=e1071
+[6] David Meyer, Evgenia Dimitriadou, Kurt Hornik, Andreas Weingessel and Friedrich   Leisch (2019). e1071: Misc Functions of the Department of Statistics, Probability   Theory Group (Formerly: E1071), TU Wien. R package version 1.7-1.   https://CRAN.R-project.org/package=e1071
   
-[6] A. Liaw and M. Wiener (2002). Classification and Regression by randomForest. R News 2(3), 18--22.
+[7] A. Liaw and M. Wiener (2002). Classification and Regression by randomForest. R News 2(3), 18--22.
 
-[7] Ribeiro, M.T., Singh, S., & Guestrin, C. (2016). "Why Should I Trust You?": Explaining the Predictions of Any Classifier. HLT-NAACL Demos.
+[8] Ribeiro, M.T., Singh, S., & Guestrin, C. (2016). "Why Should I Trust You?": Explaining the Predictions of Any Classifier. HLT-NAACL Demos.
 
-[8] O'NEIL, C. (2016). Weapons of math destruction: how big data increases inequality and threatens democracy.
+[9] O'NEIL, C. (2016). Weapons of math destruction: how big data increases inequality and threatens democracy.
 
-[9] Przemyslaw Biecek (2019). ceterisParibus: Ceteris Paribus
-  Profiles. R package version 0.3.1.
-  https://CRAN.R-project.org/package=ceterisParibus
+[10] Przemyslaw Biecek (2019). ceterisParibus: Ceteris Paribus Profiles. R package version 0.3.1. https://CRAN.R-project.org/package=ceterisParibus
 
 ***
 \centering
