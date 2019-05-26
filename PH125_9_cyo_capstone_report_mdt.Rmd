@@ -15,33 +15,36 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 *Motivation)*
 This project has been conducted as part of the Data Science Professional Certification path provided by  HarvardX, an online learning initiative of Harvard University through edX.
 In particular this is the second data science project to submit for PH125.9x Course denominated "Data Science: Capstone".
-The name of the project, Choose Your Own, is due to the fact that the dataset under analysis could be chosen by the learner from public available datasets. 
+The name of the project, Choose Your Own, is due to the fact that the dataset under analysis could be chosen by the learner from public available datasets.
+
 I chose the Fall Detection dataset from the curated list of datasets at the following link https://www.kaggle.com/annavictoria/ml-friendly-public-datasets?utm_medium=email&utm_source=intercom&utm_campaign=data+projects+onboarding , a repository indicated by Course Staff. 
 
 *Project objective)*
-As per course project introduction the project aim is to apply machine learning techniques that go beyond standard linear regression. In particular the task of this project is  multi class classification i.e. where the outcome variable is categorical with more than 2 classes. Specifically the problem statement is related to predict the type of activity among 6 different activities of daily living (ADLs) on the basis of monitored medical measures obtained through sensors worn by elder people.
+As per course project introduction the project aim is to apply machine learning techniques that go beyond standard linear regression. 
+In particular the task of this project is  multi class classification i.e. where the outcome variable is categorical with more than 2 classes. 
+Specifically the problem statement is related to predict the type of activity among 6 different activities of daily living (ADLs) on the basis of monitored medical measures obtained through sensors worn by elder people as recorded in the dataset analysed.
 
 
 *Research question)*
 The research question can be stated as:
 is it possible to predict 6 activities of daily living (ADLs) including Standing , Walking, Sitting, Falling,  Cramps, Running from few predictors monitoring health status?
 
-This project is not intended to solve the problem of "Fall Detection" which could be settled by binarysing the ADL information as Falling vs all the remaining activities.
+This project is not intended to solve the problem of "Fall Detection", as the name of the dataset could suggest, which could have been settled by binarysing the ADL information as Falling vs all the remaining activities.
 
 Furthermore note that no causal inference claim can be raised after this study that focus only on supervised learning.
 
 *Dataset)*
-Fall detection data set of Chinese hospitals of old age patients [1] is hosted by kaggle. 
-It reports 16382 observations containing the ADL label and related 6 numerical predictors.
+The Fall detection dataset of Chinese hospitals of old age patients [1] is hosted by kaggle. 
+It reports 16382 observations containing the ADL label and related 6 numerical predictors measuring the medical characteristics monitored.
 
 ## Background
 Starting point for conducting this study was the supervised leaning process as decribed by Professor Rafael Irizarry in the PH125_8 edX course on Machine Learning and in his book: Introduction to Data Science [2].
-In particular this study was conducted using the R package 'caret' as framework for machine learning [3].
+In particular this study was conducted using the R package 'caret' as the framework for machine learning [3].
 
 ## Overview and outline
 The study demonstrates that ADLs can be predicted and that the reachable accuracy of prediction depends on the model chosen.
 
-Thesrest of this report is articulated in the following sections:
+The rest of this report is articulated in the following sections:
 
 - *Methods*: in this section the dataset is explored in order to find useful insight, then the design of the study is explained and different models are proposed. Finally the modeling is described in details.
 
@@ -84,7 +87,7 @@ Fall Detection dataset contains the following valriables:
 glimpse(fall_train)
 ```
 The outcome variable ACTIVITY is numeric. In order to enable classification it has been converted to a factor with the following levels: Standing, Walking, Sitting, Falling, Cramps, Running.
-```{r labels}
+```{r labels, include=FALSE}
 fall_train <- fall_train %>% mutate(ACTIVITY = factor(ACTIVITY, 
                              labels = c('Standing', 'Walking', 'Sitting', 
                                         'Falling', 'Cramps', 'Running')))
@@ -104,7 +107,7 @@ ggplot(fall_train, aes(ACTIVITY)) +
 ```
 
 ### Predictors discriminative power
-Predictors for ADL in Fall Detection dataset are all numeric and specifically are:
+Predictors for ADL in Fall Detection dataset are all numeric and they specifically are:
 
 - TIME monitoring time
 
@@ -195,7 +198,7 @@ if(!require(randomForest)) {
 rf_mdl <- randomForest(ACTIVITY ~ ., data = fall_train)
 varImpPlot(rf_mdl)
 ```
-From the plot, SL results the most important predictor followed by EEG but all 6 predictors are of great help in the classification attempt since each contributes to decrease the GINI index measuring the decrease in node impurities from splitting on the variable, averaged over all trees.
+From the plot, SL results the most important predictor followed by EEG but all 6 predictors are of great help in the classification attempt since each contributes to decrease the GINI index. This index measures the decrease in node impurities from splitting on the variable, averaged over all trees.
 
 ## Proposed models
 In order to accomplish the multi class classification task the following models have been tried:
@@ -245,14 +248,14 @@ Under the 'caret' framework it is possible to tune the following parameter:
 ```{r multinomParam, echo=FALSE}
 modelLookup(model = 'multinom')
 ```
-The parameter Weight Decay is specific to neural networks and it helps the optimization process avoiding over-fitting.
-The training process will go through the following value for hyperparameters
-```{r multinom tune}
-tunegrid <- data.frame(decay = seq(from = 0, to = 10, by = 1))
+The tuning parameter Weight Decay is specific to neural networks and it helps the optimization process avoiding over-fitting.
+The training process has been performed in two steps, the first went through a wide range of values for the hyperparameter
+```{r multinom rough tune}
+tunegrid <- data.frame(decay = seq(from = 0, to = 100, by = 10))
 ```
 
 
-```{r multim, message=FALSE, warning=FALSE, cache=TRUE, include=FALSE}
+```{r multinomial rough train, message=FALSE, warning=FALSE, cache=TRUE, include=FALSE}
 if(!require(nnet)) {
   install.packages("nnet", repos = "http://cran.us.r-project.org")
   library(nnet)
@@ -275,13 +278,44 @@ stopCluster(cl)
 
 
 ```
-The resulting cross-validation plot identify the best model.
+The resulting cross-validation plot identify the range where the best model can be found.
 
-```{r multinom plot, echo=FALSE}
+```{r multinom rough plot, echo=FALSE}
 plot(multinom_mdl)
 ```
 
-After cross-validation training through the defined tune grid the best model found has the following parameter:
+Then the training effort has been restricted to the following range:
+
+```{r multinom final tune}
+tunegrid <- data.frame(decay = seq(from = 0, to = 20, by = 1))
+```
+
+```{r multinom final train, message=FALSE, warning=FALSE, cache=TRUE, include=FALSE}
+
+# setup parallel computing
+cl <- makePSOCKcluster(parallel::detectCores()-1)
+registerDoParallel(cl)
+
+# train model
+set.seed(525) 
+multinom_mdl <- train(ACTIVITY ~ .,
+                 data = fall_train,
+                 method = "multinom", 
+                 tuneGrid = tunegrid, 
+                 trControl = ctrl)
+
+#Shutdown cluster
+stopCluster(cl)
+
+```
+
+The resulting cross-validation plot identify the best model.
+
+```{r multinom final plot, echo=FALSE}
+plot(multinom_mdl)
+```
+
+After cross-validation training through the defined tune grid the best model found has the following tuning parameter:
 
 ```{r multinom tuning, echo=FALSE}
 multinom_mdl$bestTune
@@ -311,11 +345,11 @@ $$d(\overrightarrow{x}^{(i)},\overrightarrow{x}^{(j)}) = \sqrt{(x_1^{(i)}-x_1^{(
 The kNN algorithm stored all the data and classify new data points in relation of majority of k nearest (as per euclidean distance) points class.
 
 The k Nearest Neighbors model is implemented in R by 'e1071' package [6].
-Under the 'caret' machine learning famework it is possible to tune the following parameter:
+Under the 'caret' machine learning famework it is possible to tune the following hyperparameter:
 ```{r knnParam, echo=FALSE}
 modelLookup(model = 'knn')
 ```
-As parameter k increase the decision boundary get more smooth. It can be thought as a mean of regularizaion.
+As tuning parameter k, number of nearest neighbors to consider, increases the decision boundary gets more smooth. k can be thought as a mean of regularizaion.
 The training process will go through the following value for hyperparameters
 ```{r knn tune}
 tunegrid <- data.frame(k= seq(1, 30, 1))
@@ -357,7 +391,7 @@ The resulting cross-validation plot identify the best model.
 plot(knn_mdl)
 ```
 
-After cross-validation training through the defined tune grid the best model found has the following parameter:
+After cross-validation training through the defined tune grid the best model found has the following tuning parameter:
 
 ```{r knn tuning, echo=FALSE}
 knn_mdl$bestTune
@@ -370,7 +404,7 @@ confusionMatrix(data = y_hat, reference = fall_test$ACTIVITY)$table
 test_accuracy_knn <- confusionMatrix(data = y_hat, reference = fall_test$ACTIVITY)$overall['Accuracy']
 paste('model test accuracy:', round(test_accuracy_knn, 5), sep = '   ')
 ```
-kNN model succeed in classifying all 6 ADLs and it gets a good accuracy score considering that we have 6 class. Even Walking despite of class small numerosity is predicted with good accuracy.
+kNN model succeeded in classifying all 6 ADLs and it gets a good accuracy score considering that we have 6 class. Even Walking despite of class small numerosity is predicted with good accuracy.
 The best model is obtained with a quite small k, indicating a complex model so more subject to overfitting.
 
 ```{r knn test result, include=FALSE}
@@ -384,18 +418,18 @@ Random Forest algorithm builds multiple decision trees and merges them together 
 Random forest improves the predictive performance of decision tree through bagging, averaging models learned on multiple boostrapped samples from the original dataset,  and randomly selecting the predictors among which identify the one for partitioning data so that purest node are created at each split. 
 
 The Random Forest model is implemented in R by 'randomForest' package [7].
-Under the 'caret' framework it is possible to tune the following parameter:
+Under the 'caret' framework it is possible to tune the following hyperparameter:
 ```{r rfParam, echo=FALSE}
 modelLookup(model = 'rf')
 ```
-that set the number of variables randomly sampled as candidates at each split.
+mtry set the number of variables randomly sampled as candidates at each split.
 
 The training process went through the following value for hyperparameters
 ```{r rf tune}
 tunegrid <- data.frame(mtry= seq(1, 6, 1))
 ```
 
-Setting mtry equal to the numbers of predictor is only bagging not exactly random forest (trees are not decorrelated because all trees use all the predictors) and it is expected to obtain a worse accuracy.
+Note that setting mtry equal to the numbers of predictors is only bagging not exactly random forest (trees are not decorrelated because all trees use all the predictors) and it is expected to obtain a worse accuracy in cross validation.
 
 ```{r rf, message=FALSE, warning=FALSE, cache=TRUE, include=FALSE}
 if(!require(randomForest)) {
@@ -426,7 +460,7 @@ The resulting cross-validation plot identify the best model.
 plot(rf_mdl)
 ```
 
-After cross-validation training through the defined tune grid the best model found has the following parameter:
+After cross-validation training through the defined tune grid the best model found has the following tuning parameter:
 
 ```{r rf tuning, echo=FALSE}
 rf_mdl$bestTune
@@ -440,7 +474,7 @@ test_accuracy_rf <- confusionMatrix(data = y_hat, reference = fall_test$ACTIVITY
 paste('model test accuracy:', round(test_accuracy_rf, 5), sep = '   ')
 ```
 
-Random Forest model succeed in classifying all 6 ADLs and it gets a more than good accuracy score considering that we have 6 class. Even Walking despite of class small numerosity is predicted with good accuracy.
+Random Forest model succeeded in classifying all 6 ADLs and it gets a more than good accuracy score considering that we have 6 class. Even Walking despite of class small numerosity is predicted with good accuracy.
 The best model is obtained with a small mtry.
 
 ```{r rf test result, include=FALSE}
@@ -457,17 +491,20 @@ test_results %>% knitr::kable()
 
 ```
 
-Multinomial model tends to perform badly on the Fall Detection dataset because predictors are heavily correlated.
-Better accuracy performance can be achieved with kNN a memory based algorithm but with a small number k of neighbors reveiling an intrinsic complexity.
-Random Forest model predicts with a good accuracy all 6 ADLs because trees understand interactions among predictors.
+Multinomial model tends to perform badly on the Fall Detection dataset because predictors are heavily correlated and multinomial model is a generalised linear model .
+
+Better accuracy performance can be achieved with kNN a memory based algorithm but with a small number k of neighbors reveiling an intrinsic complexity and therefore a potential tendency to overfit.
+
+Random Forest model predicts with a good accuracy all 6 ADLs because trees are able to better understand interactions among predictors.
 
 ## Interpretation
-RandomForest model achieved a good accuracy result but it is a black-box model with low interpretability even if considering the variable importance side result.
+RandomForest is a black-box model with low interpretability even if considering the variable importance side result.
 The interpretability issue related to machine learning black-box methods adoption has become relevant and a subject of discussion in the data science community. In this regard it is possible to mention the provoking titled paper "Why should I trust you? ..." [8] and the equally provoking book "Weapons of Math Destruction ..." [9].
 
 So in order to provide explanation about the model result that could be validated by domain experts, a "ceteris paribus" analysis has been performed.
 The concept behind this kind of analysis is very simple: one or more single predictions of interest for domain experts is taken under consideration and then  varying only one predictor at a time keeping all other variable unchanged (this is the meaning of latin word 'ceteris paribus': all else unchanged) what the model have learned can be assessed.
-As an example the prediction selected is:
+
+As an example the following prediction has been selected:
 ```{r  prediction selected, echo=FALSE}
 knitr::kable(fall_test[15,])
 ```
@@ -559,9 +596,9 @@ plot(cp_Standing, cp_Walking, cp_Sitting, cp_Falling, cp_Cramps, cp_Running,
      alpha = 1, show_observations = TRUE, size_points = 4, color="_label_")
 ```
 
-It is a local analysis. At the selected prediction the probability of "Falling" is way higher than for other ADLs. There is a range varying HR in which the prediction remains "Falling" even if predicted predicted probabilities change.
-Decreasing a little HR Heart Beat Rate does not change the prediction while below about 300 the most probable ADLs become "Standing".
-Also increasing HR till about 350 the model mantain the prediction at "Falling".
+At the selected prediction the probability of "Falling" is way higher than for other ADLs. There is a range varying only HR in which the prediction remains "Falling" even if predicted probabilities change.
+Decreasing HR Heart Beat Rate does not change the prediction until below about 300 heart beat where the most probable ADLs become "Standing".
+Also increasing HR till about 350 the model mantains the prediction at "Falling".
 Without any domain expertise it is impossible to say if physiology theory can support the result learned by our model, but this is why generally Data Science Team includes domain experts together with Data Scientists.
 
 # Conclusions
@@ -586,12 +623,14 @@ Therefore the following 2 general limitations apply:
  
 - from the results cannot be inferred anything about causation;
 
-- the results validity depends on the accuracy of the data collected and contained in the dataset under study. Any sampling or measurement bias could be reflected in the results.
+- the results validity depends on the quality of the data collected and contained in the dataset under study. Any sampling or measurement bias could be reflected in the results.
 
 ## Model improvements
-Future research should look at evaluating different machine learning tecniques such as implementing a deep neural network with enough hidden layers for getting all the interactions between predictors.
+Future research should look at evaluating different machine learning tecniques such as implementing a deep neural network with enough hidden layers in order to better learn the interactions between predictors.
+
 Another possibility for increasing the accuracy of the prediction could be stacking: an ensemble method that builds a classification model at an upper level in regards of the studied models using prediction of the lower levels model as predictors for the upper level model.
-In the contest of an actual scientific study other explanatory tool could be investigated and used.
+
+In the contest of an actual scientific study other explanatory tool could be investigated and used so that domain experts can validate what the model have learned.
 
 ## Implications for my course of study
 This project helped me in improving and consolidating:
@@ -604,7 +643,7 @@ This project helped me in improving and consolidating:
 
 
 # Reproducibilty
-R script and rmarkdown file are available for review on public github repository: 
+R script and rmarkdown files are available for review on public github repository: 
 
 ![](images/GitHub-Mark-16px.png) https://github.com/mdt-ds/PH125.9_cyo_fallDetection .
 
@@ -641,7 +680,7 @@ sessionInfo()
 ```
 
 ## Computation time
-Sourcing the script containing all the analysis on my laptop configured as above took less than 4 minutes to complete.
+Sourcing the script containing all the analysis on my laptop configured as above took around 5 minutes to complete.
 
 # Acknowledgments
 I gratefully aknowledge the efforts of Professor Rafael Irizarry and all HarvardX  Course Staff for teaching this learning path towards a deeper understanding of Data Science. 

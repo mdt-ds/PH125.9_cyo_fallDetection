@@ -138,7 +138,8 @@ if(!require(doParallel)) {
 
 # modeling with multinomial ----
 modelLookup(model = 'multinom')
-tunegrid <- data.frame(decay = seq(from = 0, to = 10, by = 1))
+# rough training
+tunegrid <- data.frame(decay = seq(from = 0, to = 100, by = 10))
 if(!require(nnet)) {
   install.packages("nnet", repos = "http://cran.us.r-project.org")
   library(nnet)
@@ -158,7 +159,30 @@ multinom_mdl <- train(ACTIVITY ~ .,
 #Shutdown cluster
 stopCluster(cl)
 
+# rough train plot
 plot(multinom_mdl)
+
+# final training
+tunegrid <- data.frame(decay = seq(from = 0, to = 20, by = 1))
+
+# setup parallel computing
+cl <- makePSOCKcluster(parallel::detectCores()-1)
+registerDoParallel(cl)
+
+# train model
+set.seed(525) 
+multinom_mdl <- train(ACTIVITY ~ .,
+                      data = fall_train,
+                      method = "multinom", 
+                      tuneGrid = tunegrid, 
+                      trControl = ctrl)
+
+#Shutdown cluster
+stopCluster(cl)
+
+# final train plot
+plot(multinom_mdl)
+
 multinom_mdl$bestTune
 
 # evaluate model 
