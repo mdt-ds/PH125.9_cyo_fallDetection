@@ -509,7 +509,7 @@ As an example the following prediction has been selected:
 knitr::kable(fall_test[15,])
 ```
 
-The analysis for multiclass classification has been performed following the procedure documented at https://pbiecek.github.io/DALEX_docs/5-5-cetParLocalMulticlass.html#cetParLocalMulticlass for using "cerisParibus" package [10].
+The analysis for multiclass classification has been performed following the procedure documented at https://pbiecek.github.io/DALEX_docs/5-5-cetParLocalMulticlass.html#cetParLocalMulticlass for using "cerisParibus" package [10] and producing the following plot.
 
 ```{r ceteris paribus analysis, echo=FALSE}
 if(!require(DALEX)) {
